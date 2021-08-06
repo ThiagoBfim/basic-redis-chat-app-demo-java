@@ -5,22 +5,46 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisNode;
+import org.springframework.data.redis.connection.RedisSentinelConfiguration;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
+import redis.clients.jedis.JedisPoolConfig;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 
 @Configuration
 public class RedisAppConfig {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RedisAppConfig.class);
+
+    @Value("#{'${spring.redis.sentinel.nodes}'.split(',')}")
+    private List<String> nodes;
+
+    @Value("${spring.redis.host}")
+    private String host;
+    @Value("${spring.redis.port}")
+    private int port;
+    @Value("${spring.redis.password}")
+    private String passowrd;
+    @Value("${spring.redis.sentinel.password}")
+    private String sentinelPassowrd;
+    @Value("${spring.redis.sentinel.master}")
+    private String master;
 
     @Bean
     @ConditionalOnMissingBean(name = "redisTemplate")
@@ -44,35 +68,37 @@ public class RedisAppConfig {
     }
 
     @Bean
+    public RedisSentinelConfiguration sentinelConfiguration() {
+        RedisSentinelConfiguration redisSentinelConfiguration = new RedisSentinelConfiguration();
+        // Configure the name matser
+        redisSentinelConfiguration.master(master).setPassword(passowrd);
+        redisSentinelConfiguration.setSentinelPassword(sentinelPassowrd);
+        // Configure redis sentinel sentinel
+        Set<RedisNode> redisNodeSet = new HashSet<>();
+        nodes.forEach(x -> {
+            redisNodeSet.add(new RedisNode(x.split(":")[0], Integer.parseInt(x.split(":")[1])));
+        });
+        redisSentinelConfiguration.setSentinels(redisNodeSet);
+        return redisSentinelConfiguration;
+    }
+
+
+    @Bean
     ChannelTopic topic() {
         return new ChannelTopic("MESSAGES");
     }
 
     @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        // Read environment variables
-        String endpointUrl = System.getenv("REDIS_ENDPOINT_URL");
-        if (endpointUrl == null) {
-            endpointUrl = "127.0.0.1:6379";
-        }
-        String password = System.getenv("REDIS_PASSWORD");
-
-        String[] urlParts = endpointUrl.split(":");
-
-        String host = urlParts[0];
-        String port = "6379";
-
-        if (urlParts.length > 1) {
-            port = urlParts[1];
-        }
-
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(host, Integer.parseInt(port));
-
-        System.out.printf("Connecting to %s:%s with password: %s%n", host, port, password);
-
-        if (password != null) {
-            config.setPassword(password);
-        }
-        return new LettuceConnectionFactory(config);
+    @ConfigurationProperties(prefix = "spring.redis")
+    public JedisPoolConfig getRedisConfig() {
+        JedisPoolConfig config = new JedisPoolConfig();
+        return config;
     }
+
+    public @Bean
+    RedisConnectionFactory connectionFactory() {
+        LettuceConnectionFactory lettuceConnectionFactory = new LettuceConnectionFactory(sentinelConfiguration(), LettuceClientConfiguration.defaultConfiguration());
+        return lettuceConnectionFactory;
+    }
+
 }

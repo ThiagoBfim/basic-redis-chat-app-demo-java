@@ -1,10 +1,5 @@
 package com.redisdeveloper.basicchat.model;
 
-import lombok.Getter;
-import lombok.Setter;
-
-@Getter
-@Setter
 public class Room {
     private String id;
     private String[] names;
@@ -20,5 +15,21 @@ public class Room {
         this.names = new String[2];
         this.names[0] = name1;
         this.names[1] = name2;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String[] getNames() {
+        return names;
+    }
+
+    public void setNames(String[] names) {
+        this.names = names;
     }
 }

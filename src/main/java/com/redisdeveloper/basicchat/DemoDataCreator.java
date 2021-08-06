@@ -59,7 +59,7 @@ public class DemoDataCreator {
             Map<String, Room> rooms = new HashMap<>();
             for (User user : users) {
                 List<User> otherUsers = users.stream().filter(x -> x.getId() != user.getId()).collect(Collectors.toList());
-                for (var otherUser : otherUsers) {
+                for (User otherUser : otherUsers) {
                     String privateRoomId = getPrivateRoomId(user.getId(), otherUser.getId());
                     Room room;
                     if (!rooms.containsKey(privateRoomId)) {
