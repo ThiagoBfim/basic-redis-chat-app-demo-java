@@ -374,20 +374,29 @@ yarn install
 yarn start
 ```
 
-## Try it out
+## Config Redis With Kubernetes
 
-#### Deploy to Heroku
+1. Install Radis with Kubernetes using Helm
+https://github.com/bitnami/charts/tree/master/bitnami/redis
 
-<p>
-    <a href="https://heroku.com/deploy" target="_blank">
-        <img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy to Heroku" />
-    </a>
-</p>
+```
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm install my-release \
+  --set auth.password=secretpassword \
+  --set sentinel.enabled=true \
+    bitnami/redis
+```
 
-#### Deploy to Google Cloud
+2. Disponibilizar o serviço do Sentinel:
 
-<p>
-    <a href="https://deploy.cloud.run" target="_blank">
-        <img src="https://deploy.cloud.run/button.svg" alt="Run on Google Cloud" width="150px"/>
-    </a>
-</p>
+`kubectl port-forward --namespace default svc/my-release-redis-master 26379:26379`
+
+
+**Atualmente essa aplicação não está funcionando**
+
+Problema identificado:
+
+Há um issue aberto para tratar dessa problemática: https://github.com/bitnami/charts/issues/4082
+
+
+
